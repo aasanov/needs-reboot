@@ -1,0 +1,31 @@
+---
+- hosts: all
+  name: Reboot/Restart Checker
+  any_errors_fatal: true
+  become: true
+  tasks:
+  - name: check if reboot is required
+    shell: needs-restarting -r
+    failed_when: false
+    register: reboot_required
+    changed_when: false
+  - name: check if services needs to be restarted
+    shell: needs-restarting -s
+    failed_when: false
+    register: restart_required
+    changed_when: false
+  - name: Reboots
+    debug:
+      msg: "Reboot required"
+    when: reboot_required.rc != 0
+
+  - name: Restart services required
+    debug:
+      msg: "Service(s) {{ restart_required.stdout_lines }} required to be restarted"
+    when: restart_required.stdout != ""
+
+  - name: Restarting services
+    service:
+      name: "{{ item }}"
+      state: restarted
+    loop: "{{ restart_required.stdout_lines }}"
